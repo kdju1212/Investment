@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>실시간 코인가격</title>
+<style>
+body {
+	font-family: sans-serif;
+	background: #f8f8f8;
+	padding: 2rem;
+}
+
+.coin-price {
+	margin-bottom: 1rem;
+	font-size: 1.5rem;
+}
+</style>
+</head>
+<body>
+
+	<h1>📊 실시간 코인가격</h1>
+
+	<div id="KRW-BTC" class="coin-price">BTC: 불러오는 중...</div>
+	<div id="KRW-ETH" class="coin-price">ETH: 불러오는 중...</div>
+	<div id="KRW-XRP" class="coin-price">XRP: 불러오는 중...</div>
+
+	<script>
+    // ✅ WebSocket이 아닌 EventSource 사용!
+    const eventSource = new EventSource("/price-stream");
+
+    eventSource.onmessage = (event) => {
+      // 서버에서 {"code":"KRW-BTC", "price":"₩97,300,000"} 형태의 JSON이 오므로
+      const message = JSON.parse(event.data);
+
+      const target = document.getElementById(message.code);
+      if (target) {
+        target.textContent = `${message.code.replace("KRW-", "")}: ${message.price}`;
+      }
+    };
+
+    eventSource.onerror = (err) => {
+      console.error("SSE 연결 오류", err);
+    };
+  </script>
+</body>
+</html>
