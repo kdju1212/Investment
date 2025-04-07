@@ -44,7 +44,7 @@ public class GenericWebSocketClient extends BinaryWebSocketHandler {
 
 	@Override
 	public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-		System.out.println("[WebSocket 연결됨]");
+		// System.out.println("[WebSocket 연결됨]");
 		/*
 		 * 추가하고싶은 코인은 여기다 추가
 		 */
@@ -53,7 +53,7 @@ public class GenericWebSocketClient extends BinaryWebSocketHandler {
 		byte[] bytes = subscribeMessage.getBytes(StandardCharsets.UTF_8);
 		session.sendMessage(new BinaryMessage(bytes));
 
-		System.out.println("📤 메시지 전송 완료 (UTF-8 BinaryMessage)");
+		// System.out.println("📤 메시지 전송 완료 (UTF-8 BinaryMessage)");
 	}
 
 	@Override
@@ -62,15 +62,15 @@ public class GenericWebSocketClient extends BinaryWebSocketHandler {
 			byte[] payload = message.getPayload().array();
 
 			// 디버깅용: 수신된 바이너리를 Hex 형태로 출력
-			System.out.print("[받은 Binary 데이터]: ");
+			//System.out.print("[받은 Binary 데이터]: ");
 			for (byte b : payload) {
-				System.out.printf("%02X ", b);
+				//System.out.printf("%02X ", b);
 			}
-			System.out.println();
+			//System.out.println();
 
 			// 문자열로 변환 시도
 			String json = new String(payload, "UTF-8");
-			System.out.println("[디코딩된 문자열]: " + json);
+			//System.out.println("[디코딩된 문자열]: " + json);
 
 			// JSON → Map
 			Map<String, Object> data = new ObjectMapper().readValue(json, Map.class);
@@ -78,7 +78,7 @@ public class GenericWebSocketClient extends BinaryWebSocketHandler {
 			if (code != null && data.containsKey("trade_price")) {
 				double tradePrice = ((Number) data.get("trade_price")).doubleValue();
 				String formatted = NumberFormat.getCurrencyInstance(Locale.KOREA).format(tradePrice);
-				System.out.println("📈 " + code + " 현재가: " + formatted);
+				//System.out.println("📈 " + code + " 현재가: " + formatted);
 
 				// code와 price를 JSON으로 묶어서 전송
 				String jsonMessage = new ObjectMapper().writeValueAsString(Map.of("code", code, "price", formatted));
