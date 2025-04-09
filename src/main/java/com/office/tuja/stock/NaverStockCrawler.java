@@ -27,7 +27,7 @@ public class NaverStockCrawler {
 				if (!priceEl.isEmpty()) {
 					String price = priceEl.get(0).text();
 					String jsonMessage = String.format("{\"code\":\"%s\", \"price\":\"%s\"}", code, price);
-					System.out.println("📈 " + code + " 현재가: " + price);
+					//System.out.println("📈 " + code + " 현재가: " + price);
 					streamController.sendStockPrice(jsonMessage);
 				}
 			} catch (Exception e) {

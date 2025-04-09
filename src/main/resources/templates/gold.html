@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>실시간 금 시세</title>
+<style>
+body {
+	font-family: sans-serif;
+	background: #fff8e1;
+	padding: 2rem;
+}
+
+h1 {
+	color: #bfa042;
+}
+
+.gold-price {
+	font-size: 2rem;
+	margin-top: 1rem;
+}
+</style>
+</head>
+<body>
+
+	<h1>🪙 실시간 금 시세</h1>
+
+	<div id="gold-price" class="gold-price">금 시세 불러오는 중...</div>
+
+	<script>
+    const eventSource = new EventSource("/gold-stream");
+
+    eventSource.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      const target = document.getElementById("gold-price");
+      target.textContent = `${message.name}: ${message.price}원`;
+    };
+
+    eventSource.onerror = (err) => {
+      console.error("SSE 연결 오류", err);
+    };
+  </script>
+
+</body>
+</html>

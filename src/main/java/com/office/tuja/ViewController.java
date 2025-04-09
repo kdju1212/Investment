@@ -8,7 +8,7 @@ public class ViewController {
 
 	@GetMapping("/")
 	public String index() {
-		return "index"; // src/main/resources/templates/index.html
+		return "index"; 
 	}
 
 	@GetMapping("/coin")
@@ -19,6 +19,11 @@ public class ViewController {
 	@GetMapping("/stock")
 	public String stock() {
 		return "stock";
+	}
+
+	@GetMapping("/gold")
+	public String gold() {
+		return "gold";
 	}
 
 }
