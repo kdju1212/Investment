@@ -1,3 +1,13 @@
+// 전역에서 한 번만 연결되는 SSE
+const priceSpans = {}; // code: span 매핑
+const eventSource = new EventSource('/price-stream');
+eventSource.onmessage = (event) => {
+	const data = JSON.parse(event.data);
+	if (data && data.code && priceSpans[data.code]) {
+		priceSpans[data.code].textContent = `${data.price.toLocaleString()}원`;
+	}
+};
+
 document.getElementById('addButton').addEventListener('click', () => {
 	const inventory = document.getElementById('inventory');
 
@@ -17,7 +27,7 @@ document.getElementById('addButton').addEventListener('click', () => {
 	// 입력창 3개 저장할 배열
 	const inputs = [];
 
-	for (let i = 1; i <= 3; i++) {
+	for (let i = 0; i < 3; i++) {
 		const input = document.createElement('input');
 		input.type = 'text';
 		input.placeholder = 'text';
@@ -38,12 +48,11 @@ document.getElementById('addButton').addEventListener('click', () => {
 			inputs[2].placeholder = '매수 금액(원)';
 			inputs[0].setAttribute('list', 'coin-list');
 
-			// 업비트에서 코인 목록 불러오기
+			// 코인 목록 불러오기
 			fetch('https://api.upbit.com/v1/market/all?isDetails=false')
 				.then(res => res.json())
 				.then(data => {
-					const datalist = document.getElementById('coin-list') || document.createElement('datalist');
-					datalist.id = 'coin-list';
+					const datalist = document.getElementById('coin-list');
 					datalist.innerHTML = '';
 
 					data.forEach(market => {
@@ -51,10 +60,6 @@ document.getElementById('addButton').addEventListener('click', () => {
 						option.value = market.korean_name;
 						datalist.appendChild(option);
 					});
-
-					if (!document.getElementById('coin-list')) {
-						document.body.appendChild(datalist);
-					}
 				});
 		} else {
 			inputs[0].placeholder = 'text';
@@ -108,34 +113,27 @@ document.getElementById('addButton').addEventListener('click', () => {
 			.then(msg => {
 				alert(msg);
 
-				// 입력창 제거
+				// 입력 요소 제거
 				select.remove();
 				inputs.forEach(input => input.remove());
 				submitButton.remove();
 
+				// Market Code 추출 (코인인 경우만 해당)
 				const marketCodeMatch = msg.match(/KRW-[A-Z0-9]+/);
 				const marketCode = marketCodeMatch ? marketCodeMatch[0] : null;
 
-				if (!marketCode) {
-					alert('Market code를 추출할 수 없습니다.');
-					return;
+				// 현재가 span
+				const currentPriceSpan = document.createElement('span');
+				currentPriceSpan.textContent = type === 'coin' && marketCode
+					? '(현재가 로딩중...)'
+					: '(실시간 미지원)';
+
+				// 실시간 가격 갱신 등록
+				if (marketCode) {
+					priceSpans[marketCode] = currentPriceSpan;
 				}
 
-				// 현재가 받아오기용 span
-				const currentPriceSpan = document.createElement('span');
-				currentPriceSpan.textContent = '(현재가 로딩중...)';
-
-				// 실시간 가격 SSE 구독
-				const eventSource = new EventSource('/price-stream');
-				eventSource.onmessage = (event) => {
-					const data = JSON.parse(event.data);
-					if (data && data.code === marketCode) {
-						currentPriceSpan.textContent = `${data.price.toLocaleString()}원`;
-						eventSource.close(); // 한 번만 받기
-					}
-				};
-
-				// 정보 표시용 span 추가
+				// 정보 표시
 				const infoSpan = document.createElement('span');
 				infoSpan.innerHTML = `(${type}) (${name}) `;
 				item.appendChild(infoSpan);

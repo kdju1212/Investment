@@ -32,14 +32,22 @@ public class GenericWebSocketClient extends BinaryWebSocketHandler {
 	private WebSocketSession session;
 
 	public void addSubscription(String marketCode) {
-		if (session != null && session.isOpen() && subscribedMarkets.add(marketCode)) {
+		if (marketCode != null && !marketCode.isBlank()) {
+			subscribedMarkets.add(marketCode.toUpperCase());
+		}
+		if (session != null && session.isOpen()) {
 			try {
+				String joined = String.join("\", \"", subscribedMarkets);
 				String msg = String.format("[{\"ticket\":\"auto\"}, {\"type\":\"ticker\", \"codes\":[\"%s\"]}]",
-						marketCode);
+						joined);
 				session.sendMessage(new BinaryMessage(msg.getBytes(StandardCharsets.UTF_8)));
+
+				System.out.println("🆕 구독 갱신: " + joined);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
+		} else {
+			System.out.println("⚠️ WebSocket 세션이 아직 열려있지 않습니다.");
 		}
 	}
 
@@ -61,16 +69,14 @@ public class GenericWebSocketClient extends BinaryWebSocketHandler {
 
 	@Override
 	public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-		// System.out.println("[WebSocket 연결됨]");
-		/*
-		 * 추가하고싶은 코인은 여기다 추가
-		 */
-		String subscribeMessage = "[{\"ticket\":\"test\"}, {\"type\":\"ticker\", \"codes\":[\"KRW-BTC\", \"KRW-ETH\", \"KRW-XRP\"]}]";
+		this.session = session;
 
-		byte[] bytes = subscribeMessage.getBytes(StandardCharsets.UTF_8);
-		session.sendMessage(new BinaryMessage(bytes));
+		System.out.println("✅ WebSocket 연결 완료");
 
-		// System.out.println("📤 메시지 전송 완료 (UTF-8 BinaryMessage)");
+		// 이미 등록된 구독 목록이 있다면 다시 전송 (재접속 대응용)
+		if (!subscribedMarkets.isEmpty()) {
+			addSubscription(""); // 빈 스트링을 넣어도 addSubscription 안에서 무시되므로 문제 없음
+		}
 	}
 
 	@Override
@@ -94,12 +100,7 @@ public class GenericWebSocketClient extends BinaryWebSocketHandler {
 			String code = (String) data.get("code");
 			if (code != null && data.containsKey("trade_price")) {
 				double tradePrice = ((Number) data.get("trade_price")).doubleValue();
-				String formatted = NumberFormat.getCurrencyInstance(Locale.KOREA).format(tradePrice);
-				// System.out.println("📈 " + code + " 현재가: " + formatted);
-
-				// code와 price를 JSON으로 묶어서 전송
-				String jsonMessage = new ObjectMapper().writeValueAsString(Map.of("code", code, "price", formatted));
-				controller.sendPrice(jsonMessage);
+				controller.sendPrice(code, tradePrice); // ✅ 여기서 JSON으로 감싸지 말고 값만 넘기기
 			}
 
 		} catch (Exception e) {
