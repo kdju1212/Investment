@@ -51,12 +51,12 @@ document.getElementById('addButton').addEventListener('click', () => {
 	select.addEventListener('change', () => {
 		if (select.value === 'stock') {
 			inputs[0].placeholder = '기업';
-			inputs[1].placeholder = '평단가(원)';
+			inputs[1].placeholder = '매수 평균가(원)';
 			inputs[2].placeholder = '수량(개)';
 			inputs[0].removeAttribute('list');
 		} else if (select.value === 'coin') {
 			inputs[0].placeholder = '코인 이름';
-			inputs[1].placeholder = '평단가(원)';
+			inputs[1].placeholder = '매수 평균가(원)';
 			inputs[2].placeholder = '매수 금액(원)';
 			inputs[0].setAttribute('list', 'coin-list');
 
@@ -159,7 +159,7 @@ document.getElementById('addButton').addEventListener('click', () => {
 				infoSpan.innerHTML = `(${type}) (${name}) `;
 				item.appendChild(infoSpan);
 				item.appendChild(currentPriceSpan);
-				item.appendChild(document.createTextNode(` (${avgPrice}) (${amount})`));
+				item.appendChild(document.createTextNode(` (${avgPrice}원) (${amount}원)`));
 				item.appendChild(profitSpan);
 				item.appendChild(rateSpan);
 			})
