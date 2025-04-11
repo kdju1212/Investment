@@ -1,10 +1,24 @@
 // 전역에서 한 번만 연결되는 SSE
 const priceSpans = {}; // code: span 매핑
 const eventSource = new EventSource('/price-stream');
+
 eventSource.onmessage = (event) => {
 	const data = JSON.parse(event.data);
-	if (data && data.code && priceSpans[data.code]) {
-		priceSpans[data.code].textContent = `${data.price.toLocaleString()}원`;
+	const info = priceSpans[data.code];
+
+	if (data && data.code && info) {
+		const price = parseFloat(data.price.toString().replace(/[^0-9.]/g, ''));
+		if (!isNaN(price)) {
+			// 현재가 갱신
+			info.current.textContent = `${price.toLocaleString()}원`;
+
+			// 이익가 갱신
+			if (info.profit && info.avgPrice && info.amount) {
+				const quantity = info.amount / info.avgPrice;
+				const profit = Math.round(price * quantity - info.amount);
+				info.profit.textContent = ` (이익가: ${profit.toLocaleString()}원)`;
+			}
+		}
 	}
 };
 
@@ -24,9 +38,8 @@ document.getElementById('addButton').addEventListener('click', () => {
 	select.append(option, option1, option2);
 	item.appendChild(select);
 
-	// 입력창 3개 저장할 배열
+	// 입력창 3개
 	const inputs = [];
-
 	for (let i = 0; i < 3; i++) {
 		const input = document.createElement('input');
 		input.type = 'text';
@@ -35,7 +48,7 @@ document.getElementById('addButton').addEventListener('click', () => {
 		item.appendChild(input);
 	}
 
-	// 드롭다운 선택 시 입력창 placeholder 변경
+	// 드롭다운 선택 시 placeholder 설정
 	select.addEventListener('change', () => {
 		if (select.value === 'stock') {
 			inputs[0].placeholder = '기업';
@@ -54,7 +67,6 @@ document.getElementById('addButton').addEventListener('click', () => {
 				.then(data => {
 					const datalist = document.getElementById('coin-list');
 					datalist.innerHTML = '';
-
 					data.forEach(market => {
 						const option = document.createElement('option');
 						option.value = market.korean_name;
@@ -118,7 +130,7 @@ document.getElementById('addButton').addEventListener('click', () => {
 				inputs.forEach(input => input.remove());
 				submitButton.remove();
 
-				// Market Code 추출 (코인인 경우만 해당)
+				// Market Code 추출
 				const marketCodeMatch = msg.match(/KRW-[A-Z0-9]+/);
 				const marketCode = marketCodeMatch ? marketCodeMatch[0] : null;
 
@@ -128,9 +140,25 @@ document.getElementById('addButton').addEventListener('click', () => {
 					? '(현재가 로딩중...)'
 					: '(실시간 미지원)';
 
-				// 실시간 가격 갱신 등록
-				if (marketCode) {
-					priceSpans[marketCode] = currentPriceSpan;
+				// 이익가 span
+				const profitSpan = document.createElement('span');
+				profitSpan.textContent = type === 'coin' ? ' (이익가 계산중...)' : '';
+
+				// 숫자 추출
+				let avg = null, buyAmount = null;
+				if (type === 'coin' && marketCode) {
+					avg = parseFloat(avgPrice.replace(/,/g, ''));
+					buyAmount = parseFloat(amount.replace(/,/g, ''));
+
+					if (!isNaN(avg) && !isNaN(buyAmount) && avg > 0) {
+						// 실시간 가격 등록
+						priceSpans[marketCode] = {
+							current: currentPriceSpan,
+							profit: profitSpan,
+							avgPrice: avg,
+							amount: buyAmount
+						};
+					}
 				}
 
 				// 정보 표시
@@ -139,6 +167,7 @@ document.getElementById('addButton').addEventListener('click', () => {
 				item.appendChild(infoSpan);
 				item.appendChild(currentPriceSpan);
 				item.appendChild(document.createTextNode(` (${avgPrice}) (${amount})`));
+				item.appendChild(profitSpan);
 			})
 			.catch(err => alert("서버 오류 발생"));
 	});
