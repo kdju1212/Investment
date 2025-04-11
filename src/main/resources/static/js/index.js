@@ -1,58 +1,31 @@
-let tableCreated = false;
-const priceSpans = {}; // 실시간 가격 정보 매핑
-
-// 테이블이 없으면 생성
-function createTableIfNotExist() {
-	if (tableCreated) return;
-
-	const table = document.createElement('table');
-	table.id = 'assetTable';
-	table.innerHTML = `
-		<thead>
-			<tr>
-				<th>투자종류</th>
-				<th>이름</th>
-				<th>매수평균가</th>
-				<th>매수금액</th>
-				<th>현재가</th>
-				<th>이익가</th>
-				<th>수익률</th>
-			</tr>
-		</thead>
-		<tbody id="assetBody"></tbody>
-	`;
-
-	document.getElementById('inventory').appendChild(table);
-	tableCreated = true;
-}
-
-// SSE 연결
+// 전역에서 한 번만 연결되는 SSE
+const priceSpans = {}; // code: { current, profit, ratio, avgPrice, amount } 매핑
 const eventSource = new EventSource('/price-stream');
 eventSource.onmessage = (event) => {
 	const data = JSON.parse(event.data);
 	const info = priceSpans[data.code];
-	if (!info) return;
+	if (data && data.code && info) {
+		const price = parseFloat(data.price);
+		if (!isNaN(price)) {
+			info.current.textContent = `${price.toLocaleString()}원`;
 
-	const price = parseFloat(data.price);
-	if (isNaN(price)) return;
+			const quantity = info.amount / info.avgPrice;
+			const profit = Math.round(price * quantity - info.amount);
+			const ratio = ((profit / info.amount) * 100).toFixed(2);
 
-	info.current.textContent = `${price.toLocaleString()}원`;
-
-	const quantity = info.amount / info.avgPrice;
-	const profit = Math.round(price * quantity - info.amount);
-	const rate = ((profit / info.amount) * 100).toFixed(2);
-
-	info.profit.textContent = `${profit.toLocaleString()}원`;
-	info.rate.textContent = `${rate}%`;
+			info.profit.textContent = `${profit.toLocaleString()}원`;
+			info.ratio.textContent = `${ratio}%`;
+		}
+	}
 };
 
 document.getElementById('addButton').addEventListener('click', () => {
 	const inventory = document.getElementById('inventory');
 
+	// 입력창 3개 저장할 배열
 	const item = document.createElement('div');
 	item.className = 'item';
 
-	// 종류 선택 드롭다운
 	const select = document.createElement('select');
 	const option = new Option('선택', '');
 	option.disabled = true;
@@ -62,7 +35,6 @@ document.getElementById('addButton').addEventListener('click', () => {
 	select.append(option, option1, option2);
 	item.appendChild(select);
 
-	// 입력창 3개
 	const inputs = [];
 	for (let i = 0; i < 3; i++) {
 		const input = document.createElement('input');
@@ -72,7 +44,6 @@ document.getElementById('addButton').addEventListener('click', () => {
 		item.appendChild(input);
 	}
 
-	// 드롭다운 선택 시 placeholder 설정
 	select.addEventListener('change', () => {
 		if (select.value === 'stock') {
 			inputs[0].placeholder = '기업';
@@ -97,30 +68,20 @@ document.getElementById('addButton').addEventListener('click', () => {
 						datalist.appendChild(option);
 					});
 				});
-		} else {
-			inputs[0].placeholder = 'text';
-			inputs[1].placeholder = 'text';
-			inputs[2].placeholder = 'text';
-			inputs[0].removeAttribute('list');
 		}
 	});
 
-	inventory.appendChild(item);
-
-	// 제출 버튼
 	const submitButton = document.createElement('button');
 	submitButton.textContent = '제출';
 	submitButton.type = 'button';
-	item.appendChild(submitButton);
-
 	submitButton.addEventListener('click', () => {
-		// 유효성 검사
 		for (let i = 0; i < inputs.length; i++) {
 			if (!inputs[i].value.trim()) {
 				alert(`입력 ${i + 1}이(가) 비어 있습니다.`);
 				return;
 			}
 		}
+
 		if (!select.value) {
 			alert('종류를 선택해주세요.');
 			return;
@@ -128,19 +89,29 @@ document.getElementById('addButton').addEventListener('click', () => {
 
 		const type = select.value;
 		const name = inputs[0].value.trim();
-		const avgPrice = inputs[1].value.trim();
-		const amount = inputs[2].value.trim();
+		const avgPriceStr = inputs[1].value.trim().replace(/,/g, '').replace(/원/g, '');
+		const amountStr = inputs[2].value.trim().replace(/,/g, '').replace(/원/g, '');
+
+		const avg = parseFloat(avgPriceStr);
+		const amount = parseFloat(amountStr);
+
+		if (isNaN(avg) || isNaN(amount)) {
+			alert('숫자 형식이 잘못되었습니다.');
+			return;
+		}
 
 		const payload = {
-			type: type,
-			name: name,
-			price: avgPrice,
-			amount: amount
+			type,
+			name,
+			price: avg,
+			amount
 		};
 
 		fetch('/api/asset/add', {
 			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
+			headers: {
+				'Content-Type': 'application/json'
+			},
 			body: JSON.stringify(payload)
 		})
 			.then(res => res.text())
@@ -152,46 +123,72 @@ document.getElementById('addButton').addEventListener('click', () => {
 				inputs.forEach(input => input.remove());
 				submitButton.remove();
 
-				createTableIfNotExist();
-
 				const marketCodeMatch = msg.match(/KRW-[A-Z0-9]+/);
 				const marketCode = marketCodeMatch ? marketCodeMatch[0] : null;
 
-				const tbody = document.getElementById('assetBody');
-				const row = document.createElement('tr');
+				// 테이블 없으면 생성
+				let table = document.querySelector('table');
+				if (!table) {
+					table = document.createElement('table');
+					const thead = document.createElement('thead');
+					thead.innerHTML = `
+						<tr>
+							<th>투자종류</th>
+							<th>기업/코인</th>
+							<th>현재가</th>
+							<th>매수평균가</th>
+							<th>매수금액</th>
+							<th>이익가</th>
+							<th>수익률</th>
+						</tr>`;
+					table.appendChild(thead);
+					table.appendChild(document.createElement('tbody'));
+					inventory.appendChild(table);
+				}
 
-				const typeCell = document.createElement('td');
-				const nameCell = document.createElement('td');
-				const avgCell = document.createElement('td');
-				const amountCell = document.createElement('td');
-				const currentCell = document.createElement('td');
-				const profitCell = document.createElement('td');
-				const rateCell = document.createElement('td');
+				const tbody = table.querySelector('tbody');
+				const tr = document.createElement('tr');
 
-				typeCell.textContent = type;
-				nameCell.textContent = name;
-				avgCell.textContent = avgPrice;
-				amountCell.textContent = amount;
-				currentCell.textContent = marketCode ? '로딩중...' : '-';
-				profitCell.textContent = marketCode ? '계산중...' : '-';
-				rateCell.textContent = marketCode ? '계산중...' : '-';
+				const tdType = document.createElement('td');
+				tdType.textContent = type;
 
-				row.append(typeCell, nameCell, avgCell, amountCell, currentCell, profitCell, rateCell);
-				tbody.appendChild(row);
+				const tdName = document.createElement('td');
+				tdName.textContent = name;
 
-				// 실시간 가격 갱신 등록
-				const avg = parseFloat(avgPrice.replace(/,/g, ''));
-				const buyAmount = parseFloat(amount.replace(/,/g, ''));
-				if (marketCode && !isNaN(avg) && !isNaN(buyAmount)) {
+				const tdCurrent = document.createElement('td');
+				tdCurrent.textContent = marketCode ? '로딩 중...' : '실시간 미지원';
+
+				const tdAvg = document.createElement('td');
+				tdAvg.textContent = avg.toLocaleString() + '원';
+
+				const tdAmount = document.createElement('td');
+				tdAmount.textContent = amount.toLocaleString() + '원';
+
+				const tdProfit = document.createElement('td');
+				tdProfit.textContent = marketCode ? '계산중...' : '-';
+
+				const tdRatio = document.createElement('td');
+				tdRatio.textContent = marketCode ? '...' : '-';
+
+				tr.append(tdType, tdName, tdCurrent, tdAvg, tdAmount, tdProfit, tdRatio);
+				tbody.appendChild(tr);
+
+				// 실시간 가격 갱신 매핑 등록
+				if (marketCode) {
 					priceSpans[marketCode] = {
-						current: currentCell,
-						profit: profitCell,
-						rate: rateCell,
+						current: tdCurrent,
+						profit: tdProfit,
+						ratio: tdRatio,
 						avgPrice: avg,
-						amount: buyAmount
+						amount: amount
 					};
 				}
 			})
 			.catch(err => alert("서버 오류 발생"));
 	});
+
+	item.appendChild(select);
+	inputs.forEach(input => item.appendChild(input));
+	item.appendChild(submitButton);
+	inventory.appendChild(item);
 });
