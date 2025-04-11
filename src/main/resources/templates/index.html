@@ -7,17 +7,21 @@
 </head>
 <body>
 	<h1>hello</h1>
-	<a href="coin">코인</a>
-	<a href="stock">주식</a>
-	<a href="gold">금</a>
+	<nav>
+		<a href="coin">코인</a> <a href="stock">주식</a> <a href="gold">금</a>
+	</nav>
 
-	<div>
-        <h2>보고싶은 투자</h2>
-        <button id="addButton">+ 추가</button>
-        <div id="inventory"></div>
-    </div>
-    <datalist id="coin-list"></datalist>
-    
-<script src="/js/index.js" defer></script>
+	<section>
+		<h2>보고싶은 투자</h2>
+		<button id="addButton">+ 추가</button>
+
+		<!-- 자산 입력 및 테이블 -->
+		<div id="inventory"></div>
+	</section>
+
+	<!-- 코인 자동완성용 datalist -->
+	<datalist id="coin-list"></datalist>
+
+	<script src="/js/index.js" defer></script>
 </body>
 </html>

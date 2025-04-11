@@ -1,24 +1,72 @@
-#inventory {
-	display: flex;
-	flex-direction: column;
-	gap: 10px;
-	margin-top: 10px;
+body {
+	font-family: Arial, sans-serif;
+	padding: 20px;
+	background-color: #f8f9fa;
+}
+
+h1 {
+	font-size: 28px;
+	margin-bottom: 10px;
+}
+
+nav a {
+	margin-right: 15px;
+	text-decoration: none;
+	color: #007bff;
+}
+
+nav a:hover {
+	text-decoration: underline;
+}
+
+section {
+	margin-top: 30px;
+}
+
+button {
+	background-color: #28a745;
+	border: none;
+	color: white;
+	padding: 6px 12px;
+	margin: 10px 0;
+	font-size: 14px;
+	cursor: pointer;
+	border-radius: 4px;
+}
+
+button:hover {
+	background-color: #218838;
 }
 
 .item {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	padding: 10px;
-	background-color: #f9f9f9;
-	border: 1px solid #ddd;
-	border-radius: 6px;
+	margin-bottom: 15px;
 }
 
-.item select {
+input[type="text"], select {
+	margin: 5px 4px;
 	padding: 5px;
+	font-size: 14px;
 }
 
-.item span {
-	min-width: 60px;
+table {
+	width: 100%;
+	border-collapse: collapse;
+	margin-top: 20px;
+	background-color: white;
+	box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+th, td {
+	border: 1px solid #dee2e6;
+	padding: 10px;
+	text-align: center;
+}
+
+th {
+	background-color: #343a40;
+	color: white;
+}
+
+td span {
+	font-weight: bold;
 }
